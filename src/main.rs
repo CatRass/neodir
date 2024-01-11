@@ -1,8 +1,4 @@
 use std::env;
-use std::fs;
-use std::process;
-
-use neodir::System;
 
 #[allow(non_snake_case)]
 fn main() {
@@ -18,12 +14,5 @@ fn main() {
         "."
     };
 
-    let files = fs::read_dir(directedLoc).unwrap_or_else(|error: std::io::Error| {
-        println!("Error: {error}");
-        process::exit(1);
-    });
-
-    let userSys: System = System{os: env::consts::OS, files};
-    neodir::printDir(userSys);
-
+    neodir::run(env::consts::OS, directedLoc);
 }
