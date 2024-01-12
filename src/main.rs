@@ -14,5 +14,5 @@ fn main() {
         "."
     };
 
-    neodir::run(env::consts::OS, directedLoc);
+    neodir::run(/*env::consts::OS,*/ directedLoc);
 }

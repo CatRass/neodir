@@ -1,100 +1,171 @@
-use std::{fs, time::UNIX_EPOCH};
-use chrono::{Utc, DateTime, Local};
 use std::process;
 
-pub fn run(os: &str, path: &str){
-    let files = fs::read_dir(path).unwrap_or_else(|error: std::io::Error| {
+pub fn run(/*os: &str,*/ path: &str){
+
+    let files = std::fs::read_dir(path).unwrap_or_else(|error: std::io::Error| {
         println!("Error: {error}");
         process::exit(1);
     });
 
-    // NOTE: This code is useless in its current state.
-    // As you cannot use std::os::windows on other platforms,
-    // the import causes compilation errors on Linux (and possibly other platforms).
-    // Thus, I need a new solution to making the program compilable on different OSes
-    // using the same code.
-    if os == "windows" {
-        printDir_win(files);
-    } else {
-        println!("{}OS not recognised: defaulting to std::fs methods{}","\x1b[31m","\x1b[0m");
-        printDir(files);
-    }
+    platform::printDir(files);
 }
 
+// Conditional Compiling code written with the help of Jmb on StackOverflow
+// https://stackoverflow.com/a/77805203/12884111
 #[allow(non_snake_case)]
-pub fn printDir_win(currDir: fs::ReadDir){
-    
+#[cfg (target_os = "windows")]
+mod platform {
+    use std::fs;
     use std::os::windows::fs::MetadataExt;
+    use chrono::{Utc, DateTime, Local}; 
 
-    println!("\x1b[34m{:50} {:15} {:15} {:30}\x1b[0m", "File", "Size (Bytes)", "Read-Only", "Last Modified");
+    pub fn printDir(currDir: fs::ReadDir){
 
-    for file in currDir {
-
-        let mut fileSpacing = 50;
-
-        let currentFilePath = file.unwrap().path();
-        let fileMetadata = fs::metadata(&currentFilePath).unwrap();
-
-        let fileName = if fileMetadata.is_dir() {
-            // For coloured file names
-            format!("\x1b[95m{}\x1b[0m",&currentFilePath.display())
-            // currentFilePath.display().to_string()
-        } else {
-            currentFilePath.display().to_string()
-        };
-
-        // TODO: Optimise this
-        if fileName != currentFilePath.display().to_string(){
-            fileSpacing = 59;
+        println!("\x1b[34m{:50} {:15} {:15} {:30}\x1b[0m", "File", "Size (Bytes)", "Read-Only", "Last Modified");
+    
+        'infoDump: for file in currDir {
+    
+            let mut fileSpacing = 50;
+    
+            let currentFilePath = file.unwrap().path();
+            
+            let fileMetadataResult = fs::metadata(&currentFilePath);
+            let fileMetadata = match fileMetadataResult {
+                Err(error) =>  match error.kind() {
+                    std::io::ErrorKind::PermissionDenied => continue 'infoDump,
+                    _ => panic!("An error occured: {error}")
+                }
+                Ok(fileMetadata) => fileMetadata
+            };
+    
+            let fileName = if fileMetadata.is_dir() {
+                // For coloured file names
+                format!("\x1b[95m{}\x1b[0m",&currentFilePath.display())
+                // currentFilePath.display().to_string()
+            } else {
+                currentFilePath.display().to_string()
+            };
+    
+            // TODO: Optimise this
+            if fileName != currentFilePath.display().to_string(){
+                fileSpacing = 59;
+            }
+    
+            let fileSize = if fileMetadata.is_file() { 
+                fileMetadata.file_size().to_string()
+            } else { 
+                "".to_string() 
+            };
+    
+            // Perform Microsoft Epoch to Unix Epoch conversion
+            let lastModifiedSecs = (fileMetadata.last_write_time()/10000000) - 11644473600;
+            let lastModified = DateTime::<Utc>::from_timestamp(lastModifiedSecs as i64,0).unwrap().with_timezone(&Local).format("%d/%m/%Y %H:%M");
+    
+            println!("{:fileSpacing$} {:15} {:15} {:30}", fileName, fileSize, fileMetadata.permissions().readonly(), lastModified);
         }
-
-        let fileSize = if fileMetadata.is_file() { 
-            fileMetadata.file_size().to_string()
-        } else { 
-            "".to_string() 
-        };
-
-        // Perform Microsoft Epoch to Unix Epoch conversion
-        let lastModifiedSecs = (fileMetadata.last_write_time()/10000000) - 11644473600;
-        let lastModified = DateTime::<Utc>::from_timestamp(lastModifiedSecs as i64,0).unwrap().with_timezone(&Local).format("%d/%m/%Y %H:%M");
-
-        println!("{:fileSpacing$} {:15} {:15} {:30}", fileName, fileSize, fileMetadata.permissions().readonly(), lastModified);
     }
+    
 }
 
 #[allow(non_snake_case)]
-fn printDir(currDir: fs::ReadDir) {
-    println!("\x1b[34m{:50} {:15} {:15} {:30}\x1b[0m", "File", "Size (Bytes)", "Read-Only", "Last Modified");
+#[cfg (target_os = "linux")]
+mod platform {
+    
+    use chrono::{Utc, DateTime, Local};
+    use std::fs;
 
-    for file in currDir {
+    pub fn printDir(currDir: fs::ReadDir) {
+        println!("\x1b[34m{:50} {:15} {:15} {:30}\x1b[0m", "File", "Size (Bytes)", "Read-Only", "Last Modified");
+    
+        'infoDump: for file in currDir {
+    
+            let mut fileSpacing = 50;
+    
+            let currentFilePath = file.unwrap().path();
 
-        let mut fileSpacing = 50;
-
-        let currentFilePath = file.unwrap().path();
-        let fileMetadata = fs::metadata(&currentFilePath).unwrap();
-
-        let fileName = if fileMetadata.is_dir() {
-            // For coloured file names
-            format!("\x1b[95m{}\x1b[0m",&currentFilePath.display())
-            // currentFilePath.display().to_string()
-        } else {
-            currentFilePath.display().to_string()
-        };
-
-        // TODO: Optimise this
-        if fileName != currentFilePath.display().to_string(){
-            fileSpacing = 59;
+            let fileMetadataResult = fs::metadata(&currentFilePath);
+            let fileMetadata = match fileMetadataResult {
+                Err(error) =>  match error.kind() {
+                    std::io::ErrorKind::PermissionDenied => continue 'infoDump,
+                    _ => panic!("An error occured: {error}")
+                }
+                Ok(fileMetadata) => fileMetadata
+            };
+    
+            let fileName = if fileMetadata.is_dir() {
+                // For coloured file names
+                format!("\x1b[95m{}\x1b[0m",&currentFilePath.display())
+                // currentFilePath.display().to_string()
+            } else {
+                currentFilePath.display().to_string()
+            };
+    
+            // TODO: Optimise this
+            if fileName != currentFilePath.display().to_string(){
+                fileSpacing = 59;
+            }
+    
+            let fileSize = if fileMetadata.is_file() { 
+                fileMetadata.len().to_string()
+            } else { 
+                "".to_string() 
+            };
+    
+            let lastModifiedSecs = fileMetadata.modified().unwrap().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+            let lastModified = DateTime::<Utc>::from_timestamp(lastModifiedSecs as i64,0).unwrap().with_timezone(&Local).format("%d/%m/%Y %H:%M");
+    
+            println!("{:fileSpacing$} {:15} {:15} {:30}", fileName, fileSize, fileMetadata.permissions().readonly(), lastModified);
         }
+    }   
+}
 
-        let fileSize = if fileMetadata.is_file() { 
-            fileMetadata.len().to_string()
-        } else { 
-            "".to_string() 
-        };
+#[allow(non_snake_case)]
+#[cfg (not (any (target_os = "windows", target_os = "linux")))]
+mod platform {
+    
+    use chrono::{Utc, DateTime, Local};
+    use std::fs;
 
-        let lastModifiedSecs = fileMetadata.modified().unwrap().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let lastModified = DateTime::<Utc>::from_timestamp(lastModifiedSecs as i64,0).unwrap().with_timezone(&Local).format("%d/%m/%Y %H:%M");
-
-        println!("{:fileSpacing$} {:15} {:15} {:30}", fileName, fileSize, fileMetadata.permissions().readonly(), lastModified);
-    }
+    fn printDir(currDir: fs::ReadDir) {
+        println!("\x1b[34m{:50} {:15} {:15} {:30}\x1b[0m", "File", "Size (Bytes)", "Read-Only", "Last Modified");
+    
+        'infoDump: for file in currDir {
+    
+            let mut fileSpacing = 50;
+    
+            let currentFilePath = file.unwrap().path();
+            let fileMetadataResult = fs::metadata(&currentFilePath);
+            let fileMetadata = match fileMetadataResult {
+                Err(error) =>  match error.kind() {
+                    std::io::ErrorKind::PermissionDenied => continue 'infoDump,
+                    _ => panic!("An error occured: {error}")
+                }
+                Ok(fileMetadata) => fileMetadata
+            };
+    
+            let fileName = if fileMetadata.is_dir() {
+                // For coloured file names
+                format!("\x1b[95m{}\x1b[0m",&currentFilePath.display())
+                // currentFilePath.display().to_string()
+            } else {
+                currentFilePath.display().to_string()
+            };
+    
+            // TODO: Optimise this
+            if fileName != currentFilePath.display().to_string(){
+                fileSpacing = 59;
+            }
+    
+            let fileSize = if fileMetadata.is_file() { 
+                fileMetadata.len().to_string()
+            } else { 
+                "".to_string() 
+            };
+    
+            let lastModifiedSecs = fileMetadata.modified().unwrap().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+            let lastModified = DateTime::<Utc>::from_timestamp(lastModifiedSecs as i64,0).unwrap().with_timezone(&Local).format("%d/%m/%Y %H:%M");
+    
+            println!("{:fileSpacing$} {:15} {:15} {:30}", fileName, fileSize, fileMetadata.permissions().readonly(), lastModified);
+        }
+    }   
 }
