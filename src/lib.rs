@@ -26,8 +26,9 @@ mod platform {
         'infoDump: for file in currDir {
     
             let mut fileSpacing = 50;
-    
-            let currentFilePath = file.unwrap().path();
+
+            let file = file.unwrap();
+            let currentFilePath = &file.path();
             
             let fileMetadataResult = fs::metadata(&currentFilePath);
             let fileMetadata = match fileMetadataResult {
@@ -40,14 +41,13 @@ mod platform {
     
             let fileName = if fileMetadata.is_dir() {
                 // For coloured file names
-                format!("\x1b[95m{}\x1b[0m",&currentFilePath.display())
-                // currentFilePath.display().to_string()
+                format!("\x1b[95m{}\x1b[0m",&file.file_name().into_string().unwrap())
             } else {
-                currentFilePath.display().to_string()
+                file.file_name().into_string().unwrap()
             };
     
             // TODO: Optimise this
-            if fileName != currentFilePath.display().to_string(){
+            if fileName != file.file_name().into_string().unwrap(){
                 fileSpacing = 59;
             }
     
@@ -59,7 +59,9 @@ mod platform {
     
             // Perform Microsoft Epoch to Unix Epoch conversion
             let lastModifiedSecs = (fileMetadata.last_write_time()/10000000) - 11644473600;
-            let lastModified = DateTime::<Utc>::from_timestamp(lastModifiedSecs as i64,0).unwrap().with_timezone(&Local).format("%d/%m/%Y %H:%M");
+            let lastModified = DateTime::<Utc>::from_timestamp(lastModifiedSecs as i64,0)
+                                                                .unwrap().with_timezone(&Local)
+                                                                .format("%d/%m/%Y %H:%M");
     
             println!("{:fileSpacing$} {:15} {:15} {:30}", fileName, fileSize, fileMetadata.permissions().readonly(), lastModified);
         }
@@ -69,10 +71,12 @@ mod platform {
 
 #[allow(non_snake_case)]
 #[cfg (target_os = "linux")]
+#[allow(unused_imports)]
 mod platform {
     
     use chrono::{Utc, DateTime, Local};
     use std::fs;
+    use std::os::linux;
 
     pub fn printDir(currDir: fs::ReadDir) {
         println!("\x1b[34m{:50} {:15} {:15} {:30}\x1b[0m", "File", "Size (Bytes)", "Read-Only", "Last Modified");
@@ -81,8 +85,9 @@ mod platform {
     
             let mut fileSpacing = 50;
     
-            let currentFilePath = file.unwrap().path();
-
+            let file = file.unwrap();
+            let currentFilePath = &file.path();
+            
             let fileMetadataResult = fs::metadata(&currentFilePath);
             let fileMetadata = match fileMetadataResult {
                 Err(error) =>  match error.kind() {
@@ -94,14 +99,13 @@ mod platform {
     
             let fileName = if fileMetadata.is_dir() {
                 // For coloured file names
-                format!("\x1b[95m{}\x1b[0m",&currentFilePath.display())
-                // currentFilePath.display().to_string()
+                format!("\x1b[95m{}\x1b[0m",&file.file_name().into_string().unwrap())
             } else {
-                currentFilePath.display().to_string()
+                file.file_name().into_string().unwrap()
             };
     
             // TODO: Optimise this
-            if fileName != currentFilePath.display().to_string(){
+            if fileName != file.file_name().into_string().unwrap(){
                 fileSpacing = 59;
             }
     
@@ -112,7 +116,8 @@ mod platform {
             };
     
             let lastModifiedSecs = fileMetadata.modified().unwrap().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
-            let lastModified = DateTime::<Utc>::from_timestamp(lastModifiedSecs as i64,0).unwrap().with_timezone(&Local).format("%d/%m/%Y %H:%M");
+            let lastModified =  DateTime::<Utc>::from_timestamp(lastModifiedSecs as i64,0)
+                                .unwrap().with_timezone(&Local).format("%d/%m/%Y %H:%M");
     
             println!("{:fileSpacing$} {:15} {:15} {:30}", fileName, fileSize, fileMetadata.permissions().readonly(), lastModified);
         }
@@ -133,7 +138,6 @@ mod platform {
     
             let mut fileSpacing = 50;
     
-            let currentFilePath = file.unwrap().path();
             let fileMetadataResult = fs::metadata(&currentFilePath);
             let fileMetadata = match fileMetadataResult {
                 Err(error) =>  match error.kind() {
@@ -145,14 +149,13 @@ mod platform {
     
             let fileName = if fileMetadata.is_dir() {
                 // For coloured file names
-                format!("\x1b[95m{}\x1b[0m",&currentFilePath.display())
-                // currentFilePath.display().to_string()
+                format!("\x1b[95m{}\x1b[0m",&fileDirEntry.file_name().into_string().unwrap())
             } else {
-                currentFilePath.display().to_string()
+                file.file_name().into_string().unwrap()
             };
     
             // TODO: Optimise this
-            if fileName != currentFilePath.display().to_string(){
+            if fileName != file.file_name().into_string().unwrap(){
                 fileSpacing = 59;
             }
     
@@ -163,7 +166,8 @@ mod platform {
             };
     
             let lastModifiedSecs = fileMetadata.modified().unwrap().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
-            let lastModified = DateTime::<Utc>::from_timestamp(lastModifiedSecs as i64,0).unwrap().with_timezone(&Local).format("%d/%m/%Y %H:%M");
+            let lastModified =  DateTime::<Utc>::from_timestamp(lastModifiedSecs as i64,0)
+                                .unwrap().with_timezone(&Local).format("%d/%m/%Y %H:%M");
     
             println!("{:fileSpacing$} {:15} {:15} {:30}", fileName, fileSize, fileMetadata.permissions().readonly(), lastModified);
         }
