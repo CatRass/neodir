@@ -17,13 +17,14 @@ pub fn run(/*os: &str,*/ path: &str){
 mod platform {
     use std::fs;
     use std::os::windows::fs::MetadataExt;
-    use chrono::{Utc, DateTime, Local}; 
+    use chrono::{Utc, DateTime, Local};
+    // use windows::Win32; 
     use std::process::Command;
 
     pub fn printDir(currDir: fs::ReadDir){
 
         println!("\x1b[34m{:50} {:15} {:15} {:30}\x1b[0m", "File", "Size (Bytes)", "Read-Only", "Last Modified");
-
+        
         'infoDump: for file in currDir {
     
             let mut fileSpacing = 50;
@@ -70,7 +71,7 @@ mod platform {
             println!("{:fileSpacing$} {:15} {:15} {:30}", fileName, fileSize, fileMetadata.permissions().readonly(), lastModified);
         }
     }
-    
+
     /// Returns the Size of the C: drive in bytes
     fn getDriveSize() -> u64{
         let diskInfo = Command::new("wmic")
@@ -86,7 +87,27 @@ mod platform {
 
         return driveSizeB;
     }
+
+    /// Returns the available space of the C: drive in bytes
+    fn getAvailableSpace() -> u64 {
+        let availInfo = Command::new("wmic")
+                                    .arg("LogicalDisk")
+                                    .arg("Get")
+                                    .arg("freespace")
+                                    .output()
+                                    .expect("Error");
+        let result = String::from_utf8(availInfo.stdout).expect("Error");
+        let mut availSpace = result.lines();
+        let availSpaceB = availSpace.nth(1).expect("uhoh").trim().parse::<u64>().unwrap();
+
+        return availSpaceB;
+    }        
     
+    fn getAvailableSpacePer() -> f32 {
+        let percentage: f32 = getAvailableSpace() as f32 / getDriveSize() as f32;
+        return percentage;
+    }
+
 }
 
 #[allow(non_snake_case)]
