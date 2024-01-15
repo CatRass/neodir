@@ -15,15 +15,16 @@ The program is being programmed for Windows and Linux, with no Mac build planned
 - Display file size in bytes
 - Display last modified date for file and folder
 - Display if the file or folder are read-only
-<!--
+
 ### Windows Features:
-- Display 
+- Display mounted drive capacity (C: only)
+ 
+<!--
 ### Linux Features:
 - ![Tux](https://skillicons.dev/icons?i=linux)
 -->
 
 ## Planned Features
-- Show current disk storage above directory print-out
 - Order list so directories appear on top
 - Toggle hidden file visibility through command-line argument/flag
 - Use proper Windows API for system info and querying

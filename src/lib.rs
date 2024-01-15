@@ -1,4 +1,5 @@
 use std::process;
+// ANSI Escape Code Guide: https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
 
 pub fn run(/*os: &str,*/ path: &str){
 
@@ -15,13 +16,16 @@ pub fn run(/*os: &str,*/ path: &str){
 #[allow(non_snake_case)]
 #[cfg (target_os = "windows")]
 mod platform {
-    use std::fs;
+    use std::{fs, ops::Mul};
     use std::os::windows::fs::MetadataExt;
     use chrono::{Utc, DateTime, Local};
     // use windows::Win32; 
     use std::process::Command;
 
     pub fn printDir(currDir: fs::ReadDir){
+        println!("");
+        printStorageSpace();
+        println!("");
 
         println!("\x1b[34m{:50} {:15} {:15} {:30}\x1b[0m", "File", "Size (Bytes)", "Read-Only", "Last Modified");
         
@@ -103,9 +107,20 @@ mod platform {
         return availSpaceB;
     }        
     
+    /// Returns the available space on the C: drive, as a percentage decimal
     fn getAvailableSpacePer() -> f32 {
         let percentage: f32 = getAvailableSpace() as f32 / getDriveSize() as f32;
         return percentage;
+    }
+
+    // TODO: Optimise this. It's too convoluted and uses too many variables.
+    fn printStorageSpace(){
+        let freeSpace = getAvailableSpacePer();
+        let usedSpace = 1.0 - freeSpace;
+        let freeSpaceLen = freeSpace.mul(50.0) as usize;
+        let usedSpaceLen = usedSpace.mul(50.0) as usize;
+
+        println!("\x1b[32mC: {:█<usedSpaceLen$}{:░<freeSpaceLen$} {}% Free\x1b[0m","","",freeSpaceLen*2);
     }
 
 }
