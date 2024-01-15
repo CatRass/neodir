@@ -1,4 +1,6 @@
 use std::process;
+#[cfg(test)]
+mod tests;
 // ANSI Escape Code Guide: https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
 
 pub fn run(/*os: &str,*/ path: &str){
@@ -91,7 +93,6 @@ mod platform {
 
         return driveSizeB;
     }
-
     /// Returns the available space of the C: drive in bytes
     fn getAvailableSpace() -> u64 {
         let availInfo = Command::new("wmic")
@@ -105,22 +106,29 @@ mod platform {
         let availSpaceB = availSpace.nth(1).expect("uhoh").trim().parse::<u64>().unwrap();
 
         return availSpaceB;
-    }        
-    
+    }            
     /// Returns the available space on the C: drive, as a percentage decimal
     fn getAvailableSpacePer() -> f32 {
         let percentage: f32 = getAvailableSpace() as f32 / getDriveSize() as f32;
         return percentage;
     }
-
     // TODO: Optimise this. It's too convoluted and uses too many variables.
-    fn printStorageSpace(){
+    pub fn printStorageSpace(){
+
+        let termSeq = "\x1b[0m";
+
         let freeSpace = getAvailableSpacePer();
         let usedSpace = 1.0 - freeSpace;
         let freeSpaceLen = freeSpace.mul(50.0) as usize;
         let usedSpaceLen = usedSpace.mul(50.0) as usize;
 
-        println!("\x1b[32mC: {:█<usedSpaceLen$}{:░<freeSpaceLen$} {}% Free\x1b[0m","","",freeSpaceLen*2);
+        let colour = if freeSpace > 0.2 {
+            "\x1b[32m"
+        } else {
+            "\x1b[31m"
+        };
+
+        println!("{colour}C: {:█<usedSpaceLen$}{:░<freeSpaceLen$} {}% Free {termSeq}","","",freeSpaceLen*2);
     }
 
 }
