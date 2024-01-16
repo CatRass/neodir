@@ -19,6 +19,7 @@ The program is being programmed for Windows and Linux, with no Mac build planned
 ### Windows Features:
 - Display mounted drive capacity (C: only)
 - Show hidden files with a command-line argument
+- Shows the Windows [File Attribute](https://learn.microsoft.com/en-us/windows/win32/fileio/file-attribute-constants) value
  
 <!--
 ### Linux Features:

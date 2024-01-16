@@ -4,14 +4,22 @@ mod tests;
 // ANSI Escape Code Guide: https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
 
 #[allow(non_snake_case)]
-pub fn run(/*os: &str,*/ path: &str, showHidden: bool){
+struct Config {
+    showHidden: bool,
+    showAttributes: bool,
+}
+
+#[allow(non_snake_case)]
+pub fn run(/*os: &str,*/ path: &str, showHidden: bool, showAttributes: bool){
 
     let files = std::fs::read_dir(path).unwrap_or_else(|error: std::io::Error| {
         println!("Error: {error}");
         process::exit(1);
     });
 
-    platform::printDir(files, showHidden);
+    let currConfig = Config{showHidden, showAttributes};
+
+    platform::printDir(files, currConfig);
 }
 
 pub fn help() {
@@ -20,7 +28,8 @@ pub fn help() {
     println!("Usage: neodir [DIRECTORY] [OPTIONS]\n");
     // Options
     println!("OPTIONS:");
-    println!("\t-h: Show hidden files (Not Implemented)");
+    println!("\t-a: Show file attributes (Windows Only)");
+    println!("\t-h: Show hidden files (Windows Only)");
     println!("\nNote: Options can only be used if you provide a directory.\nFor the current directory, use '.'");
 }
 
@@ -32,16 +41,21 @@ mod platform {
     use std::fs::Metadata;
     use std::{fs, ops::Mul};
     use std::os::windows::fs::MetadataExt;
+    use chrono::format::{DelayedFormat, StrftimeItems};
     use chrono::{Utc, DateTime, Local};
     // use windows::Win32; 
     use std::process::Command;
 
-    pub fn printDir(currDir: fs::ReadDir, showHidden: bool){
+    pub fn printDir(currDir: fs::ReadDir, currConfig: super::Config){
         println!("");
         printStorageSpace();
         println!("");
 
-        println!("\x1b[34m{:50} {:15} {:15} {:30}\x1b[0m", "File", "Size (Bytes)", "Read-Only", "Last Modified");
+        print!("\x1b[34m{:50} {:15} {:15} {:30}", "File", "Size (Bytes)", "Read-Only", "Last Modified");
+        if currConfig.showAttributes {
+            print!("{}","File Attributes");
+        }
+        println!("\x1b[0m");
         
         'infoDump: for file in currDir {
     
@@ -50,6 +64,7 @@ mod platform {
             let file = file.unwrap();
             let currentFilePath = &file.path();
             
+            // Retrieve file Metadata
             let fileMetadata = match fs::metadata(&currentFilePath) {
                 Err(error) =>  match error.kind() {
                     std::io::ErrorKind::PermissionDenied => continue 'infoDump,
@@ -58,25 +73,27 @@ mod platform {
                 Ok(fileMetadata) => fileMetadata
             };
 
-            if checkWinFileAttribute(&fileMetadata,WinFileAttribute::Hidden) && showHidden {
+            // Check the attribute of the current file/folder
+            if checkWinFileAttribute(&fileMetadata,WinFileAttribute::Hidden) && !currConfig.showHidden {
                 continue 'infoDump;
             }
-    
-            let fileName = if fileMetadata.is_dir() {
+            
+            // Get current file/folder name
+            let fileName;
+            if fileMetadata.is_dir() {
                 // For coloured file names
-                format!("\x1b[95m{}\x1b[0m",&file.file_name()
+                fileName =format!("\x1b[95m{}\x1b[0m",&file.file_name()
                                             .into_string()
                                             .unwrap()
-                )
-            } else {
-                file.file_name().into_string().unwrap()
-            };
-    
-            // TODO: Optimise this
-            if fileName != file.file_name().into_string().unwrap(){
+                );
+                // Since the folder names are coloured and use invisible colours, we have
+                // to increase the spacing so everything stays in-line
                 fileSpacing = 59;
-            }
-    
+            } else {
+                fileName = file.file_name().into_string().unwrap()
+            };
+            
+            // Folders should not show their sizes
             let fileSize = if fileMetadata.is_file() { 
                 fileMetadata.file_size().to_string()
             } else { 
@@ -84,16 +101,23 @@ mod platform {
             };
     
             // Perform Microsoft Epoch to Unix Epoch conversion
-            let lastModifiedSecs = (fileMetadata.last_write_time()/10000000) - 11644473600;
-            let lastModified = DateTime::<Utc>::from_timestamp(lastModifiedSecs as i64,0)
-                                                                .unwrap().with_timezone(&Local)
-                                                                .format("%d/%m/%Y %H:%M");
+            let lastModifiedSecs = ((fileMetadata.last_write_time()/10000000) - 11644473600) as i64;
+            let lastModified = getHumanTime(&lastModifiedSecs);
             
-            println!("{:fileSpacing$} {:15} {:15} {:30}", fileName, fileSize, fileMetadata.permissions().readonly(), lastModified);
-
+            print!("{:fileSpacing$} {:15} {:15} {:30}", fileName, fileSize, fileMetadata.permissions().readonly(), lastModified);
+            if currConfig.showAttributes {
+                print!("{}",fileMetadata.file_attributes())
+            }
+            println!("");
         }
     }
 
+    /// Returns human-readable time for the Unix Time entered
+    fn getHumanTime(seconds: &i64) -> DelayedFormat<StrftimeItems>{
+        return DateTime::<Utc>::from_timestamp(*seconds,0)
+        .unwrap().with_timezone(&Local)
+        .format("%d/%m/%Y %H:%M");
+    }
     /// Returns the Size of the C: drive in bytes
     fn getDriveSize() -> u64{
         let diskInfo = Command::new("wmic")
@@ -169,8 +193,9 @@ mod platform {
     use std::fs;
     use std::os::linux;
     use std::process::{Command,Stdio};
+    use chrono::format::{DelayedFormat, StrftimeItems};
 
-    pub fn printDir(currDir: fs::ReadDir, showHidden: bool) {
+    pub fn printDir(currDir: fs::ReadDir, currConfig: super::Config) {
         println!("\x1b[34m{:50} {:15} {:15} {:30}\x1b[0m", "File", "Size (Bytes)", "Read-Only", "Last Modified");
         'infoDump: for file in currDir {
     
@@ -206,13 +231,18 @@ mod platform {
                 "".to_string() 
             };
     
-            let lastModifiedSecs = fileMetadata.modified().unwrap().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
-            let lastModified =  DateTime::<Utc>::from_timestamp(lastModifiedSecs as i64,0)
-                                .unwrap().with_timezone(&Local).format("%d/%m/%Y %H:%M");
+            let lastModifiedSecs = fileMetadata.modified().unwrap().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() as i64;
+            let lastModified =  getHumanTime(&lastModifiedSecs);
     
             println!("{:fileSpacing$} {:15} {:15} {:30}", fileName, fileSize, fileMetadata.permissions().readonly(), lastModified);
         }
     }   
+
+    fn getHumanTime(seconds: &i64) -> DelayedFormat<StrftimeItems>{
+        return DateTime::<Utc>::from_timestamp(*seconds,0)
+        .unwrap().with_timezone(&Local)
+        .format("%d/%m/%Y %H:%M");
+    }
     
     fn getDriveSize(){
         let driveSizeCmd =  Command::new("df")
@@ -248,9 +278,10 @@ mod platform {
 mod platform {
     
     use chrono::{Utc, DateTime, Local};
+    use chrono::format::{DelayedFormat, StrftimeItems};
     use std::fs;
 
-    fn printDir(currDir: fs::ReadDir, showHidden: bool) {
+    fn printDir(currDir: fs::ReadDir, currConfig: super::Config) {
         println!("\x1b[34m{:50} {:15} {:15} {:30}\x1b[0m", "File", "Size (Bytes)", "Read-Only", "Last Modified");
     
         'infoDump: for file in currDir {
@@ -284,11 +315,16 @@ mod platform {
                 "".to_string() 
             };
     
-            let lastModifiedSecs = fileMetadata.modified().unwrap().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
-            let lastModified =  DateTime::<Utc>::from_timestamp(lastModifiedSecs as i64,0)
-                                .unwrap().with_timezone(&Local).format("%d/%m/%Y %H:%M");
+            let lastModifiedSecs = fileMetadata.modified().unwrap().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() as i64;
+            let lastModified =  getHumanTime(&lastModifiedSecs);
     
             println!("{:fileSpacing$} {:15} {:15} {:30}", fileName, fileSize, fileMetadata.permissions().readonly(), lastModified);
         }
     }   
+
+    fn getHumanTime(seconds: &i64) -> DelayedFormat<StrftimeItems>{
+        return DateTime::<Utc>::from_timestamp(*seconds,0)
+        .unwrap().with_timezone(&Local)
+        .format("%d/%m/%Y %H:%M");
+    }
 }
