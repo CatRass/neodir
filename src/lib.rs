@@ -13,6 +13,14 @@ pub fn run(/*os: &str,*/ path: &str){
     platform::printDir(files);
 }
 
+pub fn help() {
+    const VERSION: &str = env!("CARGO_PKG_VERSION");
+    println!("neodir v{}\n", VERSION);
+    println!("Usage: neodir [DIRECTORY] [OPTIONS]\n");
+    // Options
+    println!("\t-h: Show hidden files (Not Implemented)");
+}
+
 // Conditional Compiling code written with the help of Jmb on StackOverflow
 // https://stackoverflow.com/a/77805203/12884111
 #[allow(non_snake_case)]
@@ -112,23 +120,21 @@ mod platform {
         let percentage: f32 = getAvailableSpace() as f32 / getDriveSize() as f32;
         return percentage;
     }
-    // TODO: Optimise this. It's too convoluted and uses too many variables.
-    pub fn printStorageSpace(){
+    
+    fn printStorageSpace(){
 
-        let termSeq = "\x1b[0m";
+        let endSeq = "\x1b[0m";
 
-        let freeSpace = getAvailableSpacePer();
-        let usedSpace = 1.0 - freeSpace;
-        let freeSpaceLen = freeSpace.mul(50.0) as usize;
-        let usedSpaceLen = usedSpace.mul(50.0) as usize;
+        let freeSpace = getAvailableSpacePer().mul(50.0) as usize;
+        let usedSpace = 50 - freeSpace;
 
-        let colour = if freeSpace > 0.2 {
+        let colour = if freeSpace > 0.2.mul(50.0) as usize {
             "\x1b[32m"
         } else {
             "\x1b[31m"
         };
 
-        println!("{colour}C: {:█<usedSpaceLen$}{:░<freeSpaceLen$} {}% Free {termSeq}","","",freeSpaceLen*2);
+        println!("{colour}C: {:█<usedSpace$}{:░<freeSpace$} {}% Free {endSeq}","","",freeSpace*2);
     }
 
 }
