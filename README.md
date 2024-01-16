@@ -3,6 +3,8 @@ neodir is a customised version of the `dir` command, tuned to my liking. The pro
 
 Neodir is written completely in Rust, currently only requiring the `chrono` crate.
 
+![Showcase](images/showcase.png)
+
 ## Build Instructions
 As I am using a Cargo build system, all you have to do is run `cargo build`.
 
