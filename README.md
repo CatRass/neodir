@@ -18,6 +18,7 @@ The program is being programmed for Windows and Linux, with no Mac build planned
 
 ### Windows Features:
 - Display mounted drive capacity (C: only)
+- Show hidden files with a command-line argument
  
 <!--
 ### Linux Features:
@@ -26,5 +27,4 @@ The program is being programmed for Windows and Linux, with no Mac build planned
 
 ## Planned Features
 - Order list so directories appear on top
-- Toggle hidden file visibility through command-line argument/flag
 - Use proper Windows API for system info and querying

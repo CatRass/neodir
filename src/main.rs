@@ -18,7 +18,9 @@ fn main() {
         } else {
             "."
         };
-        neodir::run(directedLoc);
+
+        let showHidden = !_args.contains(&String::from("-h"));
+        neodir::run(directedLoc, showHidden);
         process::exit(0);
     }
 }

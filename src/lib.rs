@@ -3,14 +3,15 @@ use std::process;
 mod tests;
 // ANSI Escape Code Guide: https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
 
-pub fn run(/*os: &str,*/ path: &str){
+#[allow(non_snake_case)]
+pub fn run(/*os: &str,*/ path: &str, showHidden: bool){
 
     let files = std::fs::read_dir(path).unwrap_or_else(|error: std::io::Error| {
         println!("Error: {error}");
         process::exit(1);
     });
 
-    platform::printDir(files);
+    platform::printDir(files, showHidden);
 }
 
 pub fn help() {
@@ -18,7 +19,9 @@ pub fn help() {
     println!("neodir v{}\n", VERSION);
     println!("Usage: neodir [DIRECTORY] [OPTIONS]\n");
     // Options
+    println!("OPTIONS:");
     println!("\t-h: Show hidden files (Not Implemented)");
+    println!("\nNote: Options can only be used if you provide a directory.\nFor the current directory, use '.'");
 }
 
 // Conditional Compiling code written with the help of Jmb on StackOverflow
@@ -26,13 +29,14 @@ pub fn help() {
 #[allow(non_snake_case)]
 #[cfg (target_os = "windows")]
 mod platform {
+    use std::fs::Metadata;
     use std::{fs, ops::Mul};
     use std::os::windows::fs::MetadataExt;
     use chrono::{Utc, DateTime, Local};
     // use windows::Win32; 
     use std::process::Command;
 
-    pub fn printDir(currDir: fs::ReadDir){
+    pub fn printDir(currDir: fs::ReadDir, showHidden: bool){
         println!("");
         printStorageSpace();
         println!("");
@@ -46,14 +50,17 @@ mod platform {
             let file = file.unwrap();
             let currentFilePath = &file.path();
             
-            let fileMetadataResult = fs::metadata(&currentFilePath);
-            let fileMetadata = match fileMetadataResult {
+            let fileMetadata = match fs::metadata(&currentFilePath) {
                 Err(error) =>  match error.kind() {
                     std::io::ErrorKind::PermissionDenied => continue 'infoDump,
                     _ => panic!("An error occured: {error}")
                 }
                 Ok(fileMetadata) => fileMetadata
             };
+
+            if checkWinFileAttribute(&fileMetadata,WinFileAttribute::Hidden) && showHidden {
+                continue 'infoDump;
+            }
     
             let fileName = if fileMetadata.is_dir() {
                 // For coloured file names
@@ -81,8 +88,9 @@ mod platform {
             let lastModified = DateTime::<Utc>::from_timestamp(lastModifiedSecs as i64,0)
                                                                 .unwrap().with_timezone(&Local)
                                                                 .format("%d/%m/%Y %H:%M");
-    
+            
             println!("{:fileSpacing$} {:15} {:15} {:30}", fileName, fileSize, fileMetadata.permissions().readonly(), lastModified);
+
         }
     }
 
@@ -137,6 +145,19 @@ mod platform {
         println!("{colour}C: {:█<usedSpace$}{:░<freeSpace$} {}% Free {endSeq}","","",freeSpace*2);
     }
 
+    #[allow(dead_code)]
+    /// An enum for storing Windows File Attribute values.
+    /// Values taken from: https://learn.microsoft.com/en-us/windows/win32/fileio/file-attribute-constants
+    enum WinFileAttribute {
+        ReadOnly    = 0x00000001,
+        Hidden      = 0x00000002,
+        Archive     = 0x00000020
+    }
+
+    fn checkWinFileAttribute(currFile: &Metadata, attribute: WinFileAttribute) -> bool{
+        let attributeVal = attribute as u32;
+        return currFile.file_attributes() & attributeVal == attributeVal;
+    }
 }
 
 #[allow(non_snake_case)]
@@ -149,7 +170,7 @@ mod platform {
     use std::os::linux;
     use std::process::{Command,Stdio};
 
-    pub fn printDir(currDir: fs::ReadDir) {
+    pub fn printDir(currDir: fs::ReadDir, showHidden: bool) {
         println!("\x1b[34m{:50} {:15} {:15} {:30}\x1b[0m", "File", "Size (Bytes)", "Read-Only", "Last Modified");
         'infoDump: for file in currDir {
     
@@ -229,7 +250,7 @@ mod platform {
     use chrono::{Utc, DateTime, Local};
     use std::fs;
 
-    fn printDir(currDir: fs::ReadDir) {
+    fn printDir(currDir: fs::ReadDir, showHidden: bool) {
         println!("\x1b[34m{:50} {:15} {:15} {:30}\x1b[0m", "File", "Size (Bytes)", "Read-Only", "Last Modified");
     
         'infoDump: for file in currDir {
