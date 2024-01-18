@@ -10,12 +10,24 @@ struct Config {
 }
 
 #[allow(non_snake_case)]
-pub fn run(/*os: &str,*/ path: &str, showHidden: bool, showAttributes: bool){
+pub fn run(path: &str, showHidden: bool, showAttributes: bool){
 
-    let files = std::fs::read_dir(path).unwrap_or_else(|error: std::io::Error| {
-        println!("Error: {error}");
-        process::exit(1);
-    });
+    // let files = std::fs::read_dir(path).unwrap_or_else(|error: std::io::Error| {
+    //     println!("Error: {error}");
+    //     process::exit(1);
+    // });
+
+    let files = match std::fs::read_dir(path){
+        Err(error)  => match error.kind() {
+            std::io::ErrorKind::NotFound    => {eprintln!("Cannot find directory {path}"); process::exit(1)},
+            // I'd love to use this ErrorKind, too bad it's in nightly only
+            // https://doc.rust-lang.org/std/io/enum.ErrorKind.html#variant.NotADirectory
+            // std::io::ErrorKind::NotADirectory    => {eprintln!("{path} is not a directory, but a file"); process::exit(1)},
+            _                               => {eprintln!("An Unexpected Error Occured: {:?}",error.kind()); process::exit(1)}
+        }
+        // Err(error) => panic!("{}",error.kind()),
+        Ok(files)   => files
+    };
 
     let currConfig = Config{showHidden, showAttributes};
 

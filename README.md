@@ -8,7 +8,7 @@ Neodir is written completely in Rust, currently only requiring the `chrono` crat
 ## Build Instructions
 As I am using a Cargo build system, all you have to do is run `cargo build`.
 
-The program is being programmed for Windows and Linux, with no Mac build planned for the forseeable future.
+The program is being made for Windows and Linux, with no Mac build planned for the forseeable future.
 
 ## Features
 <!--### General Features:-->
