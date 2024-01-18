@@ -1,4 +1,7 @@
 # neodir
+[![Windows](https://github.com/CatRass/neodir/actions/workflows/rust.-windows.yml/badge.svg)](https://github.com/CatRass/neodir/actions/workflows/rust.-windows.yml)
+[![Linux](https://github.com/CatRass/neodir/actions/workflows/rust.-linux.yml/badge.svg)](https://github.com/CatRass/neodir/actions/workflows/rust.-linux.yml)
+
 neodir is a customised version of the `dir` command, tuned to my liking. The project is not complete yet, as I'm still experimenting with what features I personally would find useful in the program.
 
 Neodir is written completely in Rust, currently only requiring the `chrono` crate.
