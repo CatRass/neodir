@@ -55,7 +55,6 @@ mod platform {
     use std::os::windows::fs::MetadataExt;
     use chrono::format::{DelayedFormat, StrftimeItems};
     use chrono::{Utc, DateTime, Local};
-    // use windows::Win32; 
     use std::process::Command;
 
     pub fn printDir(currDir: fs::ReadDir, currConfig: super::Config){
@@ -68,6 +67,9 @@ mod platform {
             print!("{}","File Attributes");
         }
         println!("\x1b[0m");
+
+        let mut fileVec: Vec<String>    = vec![];
+        let mut dirVec: Vec<String>     = vec![];
         
         'infoDump: for file in currDir {
     
@@ -116,11 +118,24 @@ mod platform {
             let lastModifiedSecs = ((fileMetadata.last_write_time()/10000000) - 11644473600) as i64;
             let lastModified = getHumanTime(&lastModifiedSecs);
             
-            print!("{:fileSpacing$} {:15} {:15} {:30}", fileName, fileSize, fileMetadata.permissions().readonly(), lastModified);
+            let mut currentString = format!("{:fileSpacing$} {:15} {:15} {:30}", fileName, fileSize, fileMetadata.permissions().readonly(), lastModified);
+            
             if currConfig.showAttributes {
-                print!("{}",fileMetadata.file_attributes())
+                currentString = format!("{currentString}{}",fileMetadata.file_attributes());
             }
-            println!("");
+
+            if fileMetadata.is_file(){
+                fileVec.push(currentString);
+            } else {
+                dirVec.push(currentString);
+            }
+        }
+
+        for dir in dirVec {
+            println!("{dir}");
+        }
+        for file in fileVec {
+            println!("{file}");
         }
     }
 
@@ -164,7 +179,7 @@ mod platform {
         let percentage: f32 = getAvailableSpace() as f32 / getDriveSize() as f32;
         return percentage;
     }
-    
+    /// Prints out a "bar" showing how much storage you have
     fn printStorageSpace(){
 
         let endSeq = "\x1b[0m";

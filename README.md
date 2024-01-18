@@ -22,12 +22,11 @@ The program is being made for Windows and Linux, with no Mac build planned for t
 - Display mounted drive capacity (C: only)
 - Show hidden files with a command-line argument
 - Shows the Windows [File Attribute](https://learn.microsoft.com/en-us/windows/win32/fileio/file-attribute-constants) value
- 
+- Ordered list, with directories coming before files
 <!--
 ### Linux Features:
 - ![Tux](https://skillicons.dev/icons?i=linux)
 -->
 
 ## Planned Features
-- Order list so directories appear on top
 - Use proper Windows API for system info and querying
