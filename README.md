@@ -28,5 +28,4 @@ The program is being made for Windows and Linux, with no Mac build planned for t
 - ![Tux](https://skillicons.dev/icons?i=linux)
 -->
 
-## Planned Features
-- Use proper Windows API for system info and querying
+<!-- ## Planned Features -->

@@ -1,16 +1,9 @@
 [package]
 name = "neodir"
-version = "0.1.0"
+version = "0.5.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 chrono = "0.4.31"
-
-# [dependencies.windows]
-# version = "0.52"
-# features = [
-#     "Win32_Foundation",
-#     "Win32_Storage_FileSystem"
-# ]
