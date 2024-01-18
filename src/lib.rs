@@ -68,8 +68,10 @@ mod platform {
         }
         println!("\x1b[0m");
 
-        let mut fileVec: Vec<String>    = vec![];
-        let mut dirVec: Vec<String>     = vec![];
+        // Holds the values for files and directories
+        // contentVec[0]: Directories
+        // contentVec[1]: Files
+        let mut contentVec: Vec<Vec<String>>    = vec![vec![], vec![]];
         
         'infoDump: for file in currDir {
     
@@ -125,17 +127,16 @@ mod platform {
             }
 
             if fileMetadata.is_file(){
-                fileVec.push(currentString);
+                contentVec[1].push(currentString);
             } else {
-                dirVec.push(currentString);
+                contentVec[0].push(currentString);
             }
         }
-
-        for dir in dirVec {
-            println!("{dir}");
-        }
-        for file in fileVec {
-            println!("{file}");
+        
+        for item in contentVec {
+            for entry in item {
+                println!("{entry}");
+            }
         }
     }
 
